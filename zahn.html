@@ -179,18 +179,6 @@
 #g-schnecke .modal-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--orange), var(--orange-dark)); border: none; border-radius: 18px; font-family: 'Fredoka', sans-serif; font-size: 15px; font-weight: 700; color: var(--white); cursor: pointer; box-shadow: 0 4px 14px rgba(245,153,61,0.3); }
 #g-schnecke .modal-btn:active { transform: scale(0.95); }
 #g-schnecke .modal-btn.secondary { background: var(--white); color: var(--text-mid); border: 2px solid var(--border); box-shadow: none; margin-top: 10px; }
-#g-schnecke .mode-toggle { width: 100%; display: flex; gap: 8px; margin-bottom: 10px; }
-#g-schnecke .mode-btn { flex: 1; padding: 10px 0; border: 2px solid var(--border); background: var(--white); border-radius: 14px; font-family: 'Fredoka', sans-serif; font-size: 13px; font-weight: 600; color: var(--text-mid); cursor: pointer; }
-#g-schnecke .mode-btn:active { transform: scale(0.97); }
-#g-schnecke .mode-btn.active { background: var(--cyan); border-color: var(--cyan-dark); color: var(--text-dark); }
-#g-schnecke .mode-btn.loop.active { background: #C9B3E8; border-color: #9F7CCB; color: #3F2A66; }
-#g-schnecke .loop-block { width: 100%; background: #F3ECFB; border: 2px solid #C9B3E8; border-radius: 18px; padding: 12px; margin-bottom: 14px; }
-#g-schnecke .loop-header { font-size: 15px; font-weight: 600; color: #5B3A8A; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-#g-schnecke .loop-header .loop-icon { font-size: 20px; }
-#g-schnecke .loop-step { width: 30px; height: 30px; border-radius: 9px; border: 2px solid #C9B3E8; background: var(--white); color: #5B3A8A; font-size: 19px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
-#g-schnecke .loop-step:active { transform: scale(0.9); }
-#g-schnecke .loop-count { min-width: 26px; text-align: center; font-size: 19px; font-weight: 700; color: #5B3A8A; }
-#g-schnecke .loop-body { min-height: 58px; background: var(--white); border: 2px dashed #C9B3E8; border-radius: 12px; padding: 8px; display: flex; flex-wrap: wrap; gap: 7px; align-items: center; justify-content: center; }
 @media (max-width: 380px) {
 #g-schnecke .cmd-btn { width: 72px; }
 #g-schnecke .cmd-btn .icon { width: 30px; height: 30px; }
@@ -326,30 +314,12 @@
             <div class="grid" id="grid"></div>
         </div>
 
-        <div class="mode-toggle">
-            <button class="mode-btn active" id="mode-normal" onclick="SNAIL.setMode(false)">Programm</button>
-            <button class="mode-btn loop" id="mode-loop" onclick="SNAIL.setMode(true)">🔁 Mit Schleife</button>
-        </div>
-
         <div class="queue-label" id="queue-label">
             <span>Dein Programm</span>
             <span class="count" id="cmd-counter"></span>
         </div>
         <div class="command-queue" id="command-queue">
             <span class="empty-hint" id="empty-hint">Tippe auf die Befehle unten ⬇️</span>
-        </div>
-
-        <div class="loop-block" id="loop-block" style="display:none;">
-            <div class="loop-header">
-                <span class="loop-icon">🔁</span> Wiederhole
-                <button class="loop-step" onclick="SNAIL.changeLoop(-1)">−</button>
-                <span class="loop-count" id="loop-count">2</span>
-                <button class="loop-step" onclick="SNAIL.changeLoop(1)">+</button>
-                mal:
-            </div>
-            <div class="loop-body" id="loop-body">
-                <span class="empty-hint" id="loop-empty">Tippe die Befehle, die wiederholt werden ⬇️</span>
-            </div>
         </div>
 
         <div class="palette">
@@ -551,7 +521,7 @@ const $=function(id){return root.querySelector('#'+id);};
         {
             title:"5 – Die Treppe",
             task:"Eine Treppe nach oben rechts. Erkennst du das Muster, das sich immer wiederholt?",
-            tip:"Der Weg ist immer gleich: hoch, abbiegen, hoch, abbiegen. <b>Profi-Aufgabe:</b> Schalte oben auf 🔁 Mit Schleife um, dann musst du das Muster nur einmal eingeben!",
+            tip:"Der Weg ist immer gleich: hoch, abbiegen, hoch, abbiegen. Erkennst du das Muster? Gib es Schritt für Schritt ein.",
             start:[4,0], target:[0,4], startDir:0, obstacles:[[2,0],[3,2],[1,1],[2,3],[0,2],[1,4]]
         }
     ];
@@ -559,7 +529,6 @@ const $=function(id){return root.querySelector('#'+id);};
     let currentLevel = 0, commands = [], isRunning = false;
     let completed = new Array(LEVELS.length).fill(false);
     let snail = { r:0, c:0, dir:0 };
-    let loopMode = false, loopCount = 2, loopCommands = [];
 
     // Befehls-Icons als SVG: Vor = Pfeil, Links/Rechts = Drehpfeil (Vierteldrehung wie bei Scratch/Qobo)
     const SVG = {
@@ -637,31 +606,11 @@ const $=function(id){return root.querySelector('#'+id);};
         const a=document.createElement('div'); a.id='dir-arrow'; a.className='dir-arrow dir-'+snail.dir; a.textContent=ARROW_CHAR[snail.dir]; cell.appendChild(a);
     }
 
-    function setMode(on) {
-        if(isRunning) return;
-        loopMode = on;
-        $('mode-normal').classList.toggle('active', !on);
-        $('mode-loop').classList.toggle('active', on);
-        $('queue-label').style.display = on ? 'none' : 'flex';
-        $('command-queue').style.display = on ? 'none' : 'flex';
-        $('loop-block').style.display = on ? 'block' : 'none';
-        loadLevel(currentLevel); updateUI();
-    }
-    function changeLoop(d) {
-        if(isRunning) return;
-        loopCount = Math.max(2, Math.min(9, loopCount + d));
-        $('loop-count').textContent = loopCount;
-    }
+    function addCommand(t) { if(isRunning) return; commands.push(t); updateUI(); }
+    function removeCommand(i) { if(isRunning) return; commands.splice(i,1); updateUI(); }
+    function clearCommands() { if(isRunning) return; commands=[]; updateUI(); loadLevel(currentLevel); }
 
-    function addCommand(t) { if(isRunning) return; (loopMode?loopCommands:commands).push(t); updateUI(); }
-    function removeCommand(i) { if(isRunning) return; (loopMode?loopCommands:commands).splice(i,1); updateUI(); }
-    function clearCommands() { if(isRunning) return; if(loopMode) loopCommands=[]; else commands=[]; updateUI(); loadLevel(currentLevel); }
-
-    // expandiertes Programm (Schleife ausgerollt) zum Abspielen
-    function getProgram() {
-        if(!loopMode) return commands;
-        const out=[]; for(let k=0;k<loopCount;k++) out.push(...loopCommands); return out;
-    }
+    function getProgram() { return commands; }
 
     function renderChips(container, list, hint) {
         container.querySelectorAll('.chip').forEach(c=>c.remove());
@@ -675,12 +624,8 @@ const $=function(id){return root.querySelector('#'+id);};
     }
 
     function updateUI() {
-        if(loopMode) {
-            renderChips($('loop-body'), loopCommands, $('loop-empty'));
-        } else {
-            renderChips($('command-queue'), commands, $('empty-hint'));
-            $('cmd-counter').textContent = commands.length ? `(${commands.length} Befehle)` : '';
-        }
+        renderChips($('command-queue'), commands, $('empty-hint'));
+        $('cmd-counter').textContent = commands.length ? `(${commands.length} Befehle)` : '';
     }
 
     async function runProgram() {
@@ -688,9 +633,8 @@ const $=function(id){return root.querySelector('#'+id);};
         if(isRunning||!prog.length) return;
         isRunning=true; loadLevel(currentLevel);
         $('play-btn').classList.add('disabled');
-        const innerLen = loopMode ? loopCommands.length : commands.length;
         for(let i=0; i<prog.length; i++) {
-            const chip = loopMode ? (i % innerLen) : i;
+            const chip = i;
             hlCmd(chip,'active');
             if(!execStep(prog[i])) { hlCmd(chip,'error'); await sleep(300); showModal(false,chip); endRun(); return; }
             renderSnail(); await sleep(500); hlCmd(chip,'done');
@@ -727,14 +671,9 @@ const $=function(id){return root.querySelector('#'+id);};
             confetti({particleCount:120,spread:80,origin:{y:0.7},colors:['#F5993D','#FBBF6A','#7DD3E8','#FFD700']});
             const l=LEVELS[currentLevel]; completed[currentLevel]=true; renderPills();
             const moves = getProgram().length;
-            ic.textContent= loopMode ? '🏅' : '🎉'; ti.textContent='Geschafft!';
-            if(loopMode) {
-                tx.textContent=`Mit einer Schleife gelöst: ${loopCommands.length} Befehl${loopCommands.length===1?'':'e'}, ${loopCount}x wiederholt.`;
-                hi.textContent='🔁 Stark! So denken echte Programmierer.';
-            } else {
-                tx.textContent=`Du hast ${moves} Befehle gebraucht.`;
-                hi.textContent = (l.optimal && moves<=l.optimal) ? '⭐ Perfekt! Das war der kürzeste Weg!' : (l.optimal ? `💡 Tipp: Es geht sogar in ${l.optimal} Befehlen!` : '');
-            }
+            ic.textContent='🎉'; ti.textContent='Geschafft!';
+            tx.textContent=`Du hast ${moves} Befehle gebraucht.`;
+            hi.textContent = (l.optimal && moves<=l.optimal) ? '⭐ Perfekt! Das war der kürzeste Weg!' : (l.optimal ? `💡 Tipp: Es geht sogar in ${l.optimal} Befehlen!` : '');
             if(currentLevel < LEVELS.length-1) {
                 bt.textContent='➡️ Nächstes Level';
                 bt.onclick=()=>{ closeModal(); currentLevel++; commands=[]; loadLevel(currentLevel); updateUI(); renderPills(); };
@@ -757,7 +696,7 @@ const $=function(id){return root.querySelector('#'+id);};
 
     init();
     
-window.SNAIL={setMode,changeLoop,addCommand,clearCommands,runProgram,removeCommand};
+window.SNAIL={addCommand,clearCommands,runProgram,removeCommand};
 })();
 </script>
 
